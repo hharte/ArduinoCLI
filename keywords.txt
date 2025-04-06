@@ -1,0 +1,27 @@
+#######################################
+# Syntax Coloring Map For ArduinoCLI
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+ArduinoCLI     KEYWORD1
+CLI_Command_t  KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+poll           KEYWORD2
+processInput   KEYWORD2
+isRunning      KEYWORD2
+getSerial      KEYWORD2
+printHelp      KEYWORD2
+stop           KEYWORD2
+start          KEYWORD2
+setMaxLineLen  KEYWORD2
+setMaxArgs     KEYWORD2
+setPrompt      KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################

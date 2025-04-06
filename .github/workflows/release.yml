@@ -1,0 +1,65 @@
+name: Build Arduino Library & Create Release Package
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build_and_package:
+    name: Build Example & Package Library
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2-4: Setup Arduino CLI, Core, Dependencies (if any)
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+      - name: Install platform core (e.g., AVR)
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:avr
+      - name: Install library dependencies
+        run: |
+          echo "No explicit dependencies listed in workflow." # Add installs if needed
+
+      # Step 5: Compile Example Sketch (using --libraries)
+      - name: Compile Example Sketch
+        run: |
+          FQBN="arduino:avr:uno"
+          EXAMPLE_SKETCH_REL_PATH="examples/BasicCLI/BasicCLI.ino"
+          echo "Preparing temporary directory for libraries..."
+          SKETCHBOOK_DIR=$(mktemp -d)
+          LIB_DIR_NAME=$(basename $GITHUB_REPOSITORY)
+          LIBRARIES_PATH="$SKETCHBOOK_DIR/libraries"
+          TARGET_LIB_DIR="$LIBRARIES_PATH/$LIB_DIR_NAME"
+          echo "Creating library structure in $LIBRARIES_PATH"
+          mkdir -p "$TARGET_LIB_DIR"
+          echo "Copying repository contents to $TARGET_LIB_DIR"
+          shopt -s extglob dotglob
+          cp -a !(./.git*) "$TARGET_LIB_DIR/"
+          shopt -u extglob dotglob
+          COMPILE_SKETCH_PATH="$TARGET_LIB_DIR/$EXAMPLE_SKETCH_REL_PATH"
+          echo "Compiling $COMPILE_SKETCH_PATH for $FQBN using libraries from $LIBRARIES_PATH"
+          arduino-cli compile --fqbn "$FQBN" --libraries "$LIBRARIES_PATH" "$COMPILE_SKETCH_PATH" --verbose
+          echo "Compilation successful!"
+          rm -rf "$SKETCHBOOK_DIR"
+
+      # Step 6: Prepare Release Package
+      - name: Prepare Release Package
+        run: |
+          REPO_NAME=$(basename $GITHUB_REPOSITORY)
+          RELEASE_VERSION=${{ github.event.release.tag_name }}
+          ZIP_FILENAME="${REPO_NAME}-${RELEASE_VERSION}.zip"
+          echo "Creating library archive: $ZIP_FILENAME"
+          zip -r "$ZIP_FILENAME" . -x ".git/*" ".github/*" ".gitignore" ".*"
+          echo "ZIP_FILE=${ZIP_FILENAME}" >> $GITHUB_ENV
+
+      # Step 7: Upload Release Assets using softprops/action-gh-release
+      - name: Upload Release Asset (action-gh-release)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_FILE }} # Path(s) or glob pattern for assets to upload
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
